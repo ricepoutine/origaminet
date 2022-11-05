@@ -1,7 +1,7 @@
 port = 12345
 manualSeed = 1111
 dist = 'DDP'
-
+#definitely not using dist right now...
 n_channels = 1
 o_classes = 80
 
@@ -9,8 +9,8 @@ GradCheck = 0
 
 # Parameters for get_images (ds_load.py):
 # ==============================================================================
-get_images.max_w = 750
-get_images.max_h = 750
+get_images.max_w = 1500
+get_images.max_h = 2200
 get_images.nch = %n_channels
 
 # Parameters for SameTrCollate (ds_load.py):
@@ -20,11 +20,7 @@ SameTrCollate.prjVal = 125
 
 # Parameters for train (train.py):
 # ==============================================================================
-train.experiment_name = 'iam_gin_test_'
-
-train.AMP = False
-train.WdB = False
-train.wdbprj = 'prj_Name'
+train.experiment_name = 'demo'
 train.train_data_list = 'rus/train.gc'
 train.train_data_path = 'data/'
 train.test_data_list  = 'rus/val.gc'
@@ -33,7 +29,6 @@ train.train_batch_size = 1
 train.val_batch_size   = 1
 train.workers = 4
 train.lr = 0.01
-train.continue_model = ''
 train.valInterval = 500
 train.num_iter = 0
 

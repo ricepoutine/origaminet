@@ -1,136 +1,86 @@
 import torch
-import torch.nn.functional as F
 
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def calculate_topk_accuracy(y_pred, y, k = 5):
-    with torch.no_grad():
-        batch_size = y.shape[0]
-        _, top_pred = y_pred.topk(k, 1)
-        top_pred = top_pred.t()
-        correct = top_pred.eq(y.view(1, -1).expand_as(top_pred))
-        correct_1 = correct[:1].reshape(-1).float().sum(0, keepdim = True)
-        correct_k = correct[:k].reshape(-1).float().sum(0, keepdim = True)
-        acc_1 = correct_1 / batch_size
-        acc_k = correct_k / batch_size
-    return acc_1, acc_k
+class CTCLabelConverter(object):
+    """ Convert between text-label and text-index """
 
-# Next up is the training function. This is similar to all the previous notebooks, but with the addition 
-# of the `scheduler` and calculating/returning top-k accuracy.
+    def __init__(self, character):
+        # character (str): set of the possible characters.
+        dict_character = list(character)
 
-# The scheduler is updated by calling `scheduler.step()`. This should always be called **after** 
-# `optimizer.step()` or else the first learning rate of the scheduler will be skipped. 
+        self.dict = {}
+        for i, char in enumerate(dict_character):
+            # NOTE: 0 is reserved for 'blank' token required by CTCLoss
+            self.dict[char] = i + 1
 
-# Not all schedulers need to be called after each training batch, some are only called after each epoch. 
-# In that case, the scheduler does not need to be passed to the `train` function and can be called in 
-# the main training loop.
-def train(model, iterator, optimizer, criterion, scheduler, device, k=5):
-    
-    epoch_loss = 0
-    epoch_acc_1 = 0
-    epoch_acc_k = 0
-    
-    model.train()
-    
-    for (x, y) in iterator:
-        
-        x = x.to(device)
-        y = y.to(device)
-        
-        optimizer.zero_grad()
-                
-        y_pred, _ = model(x)
-        
-        loss = criterion(y_pred, y)
-        
-        acc_1, acc_k = calculate_topk_accuracy(y_pred, y, k=k)
-        
-        loss.backward()
-        
-        optimizer.step()
-        
-        scheduler.step()
-        
-        epoch_loss += loss.item()
-        epoch_acc_1 += acc_1.item()
-        epoch_acc_k += acc_k.item()
-        
-    epoch_loss /= len(iterator)
-    epoch_acc_1 /= len(iterator)
-    epoch_acc_k /= len(iterator)
-        
-    return epoch_loss, epoch_acc_1, epoch_acc_k
+        self.character = ['[blank]'] + dict_character  # dummy '[blank]' token for CTCLoss (index 0)
 
+    def encode(self, text):
+        """convert text-label into text-index.
+        input:
+            text: text labels of each image. [batch_size]
 
-# The evaluation function is also similar to previous notebooks, with the addition of the top-k accuracy.
-# As the one cycle scheduler should only be called after each parameter update, it is not called 
-# here as we do not update parameters whilst evaluating.
-def evaluate(model, iterator, criterion, device, k=5):
-    
-    epoch_loss = 0
-    epoch_acc_1 = 0
-    epoch_acc_k = 0
-    
-    model.eval()
-    
-    with torch.no_grad():
-        
-        for (x, y) in iterator:
+        output:
+            text: concatenated text index for CTCLoss.
+                    [sum(text_lengths)] = [text_index_0 + text_index_1 + ... + text_index_(n - 1)]
+            length: length of each text. [batch_size]
+        """
+        length = [len(s) for s in text]
+        text = ''.join(text)
+        text = [self.dict[char] for char in text]
 
-            x = x.to(device)
-            y = y.to(device)
+        return (torch.IntTensor(text).to(device), torch.IntTensor(length).to(device))
 
-            y_pred, _ = model(x)
+    def decode(self, text_index, length):
+        """ convert text-index into text-label. """
+        texts = []
+        index = 0
+        for l in length:
+            t = text_index[index:index + l]
 
-            loss = criterion(y_pred, y)
+            char_list = []
+            for i in range(l):
+                if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])) and t[i]<len(self.character):  # removing repeated characters and blank.
+                    char_list.append(self.character[t[i]])
+            text = ''.join(char_list)
 
-            acc_1, acc_k = calculate_topk_accuracy(y_pred, y, k=k)
+            texts.append(text)
+            index += l
+        return texts
 
-            epoch_loss += loss.item()
-            epoch_acc_1 += acc_1.item()
-            epoch_acc_k += acc_k.item()
-        
-    epoch_loss /= len(iterator)
-    epoch_acc_1 /= len(iterator)
-    epoch_acc_k /= len(iterator)
-        
-    return epoch_loss, epoch_acc_1, epoch_acc_k
+class Averager(object):
+    """Compute average for torch.Tensor, used for loss average."""
 
+    def __init__(self):
+        self.reset()
 
-# Next, a small helper function which tells us how long an epoch has taken.
-def epoch_time(start_time, end_time):
-    elapsed_time = end_time - start_time
-    elapsed_mins = int(elapsed_time / 60)
-    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-    return elapsed_mins, elapsed_secs
+    def add(self, v):
+        count = v.data.numel()
+        v = v.data.sum()
+        self.n_count += count
+        self.sum += v
 
+    def reset(self):
+        self.n_count = 0
+        self.sum = 0
 
-def get_predictions(model, iterator, device):
+    def val(self):
+        res = 0
+        if self.n_count != 0:
+            res = self.sum / float(self.n_count)
+        return res
 
-    model.eval()
+class Metric(object):
+    def __init__(self):
+        self.sum = torch.tensor(0.).double()
+        self.n = torch.tensor(0.)
 
-    images = []
-    labels = []
-    probs = []
+    def update(self, val):
+        self.sum += val.detach().double()
+        self.n += 1
 
-    with torch.no_grad():
+    @property
+    def avg(self):
+        return self.sum / self.n.double()
 
-        for (x, y) in iterator:
-
-            x = x.to(device)
-
-            y_pred, _ = model(x)
-
-            y_prob = F.softmax(y_pred, dim = -1)
-            top_pred = y_prob.argmax(1, keepdim = True)
-
-            images.append(x.cpu())
-            labels.append(y.cpu())
-            probs.append(y_prob.cpu())
-
-    images = torch.cat(images, dim = 0)
-    labels = torch.cat(labels, dim = 0)
-    probs = torch.cat(probs, dim = 0)
-
-    return images, labels, probs
