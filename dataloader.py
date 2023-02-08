@@ -7,6 +7,17 @@ from PIL import Image
 import itertools
 from torch.utils.data import Dataset
 import skimage
+def SameTrCollate(batch):
+    images, labels = zip(*batch)
+
+    images = [image.transpose((1,2,0)) for image in images]
+   
+    image_tensors = [torch.from_numpy(np.array(image, copy=False)) for image in images]
+    image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)
+    image_tensors = image_tensors.permute(0,3,1,2)
+
+    return image_tensors, labels
+
 
 class KGBDataLoader(Dataset):
     def __init__(self, datasoup, kgb_data_path, ralph=None, fmin=True, mln=None):
