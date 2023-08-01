@@ -1,6 +1,6 @@
 port = 12345
 manualSeed = 1111
-dist = 'DDP'
+dist = 'DP'
 
 n_channels = 1 #1 is for black/white
 o_classes = 100 #80

@@ -107,7 +107,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     num_workers = int(workers), sampler=valid_sampler if HVD3P else None)
     
     model = OrigamiNet()
-    print(model)
+    #print(model)
     model.apply(init_bn)
     model.train()
 
@@ -119,15 +119,16 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     if not pO.DDP:
         model = model.to(device)
     else:
+        print("moving model to:", opt.rank)
         model.cuda(opt.rank)
 
     optimizer = optim.Adam(model.parameters(), lr=lr) #optim.SGD(model.parameters(), lr=lr, momentum=0.9) 
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=10**(-1/90000))
 
     #manual debugging purposes
-    print("Beginning mem:", torch.cuda.memory_allocated(device)/1024/1024/1024)
-    model = model.to(device)
-    print("After model to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
+    #print("Beginning mem:", torch.cuda.memory_allocated(device)/1024/1024/1024)
+    #model = model.to(device)
+    #print("After model to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
     
     if OnceExecWorker and WdB:
         wandb.watch(model, log="all")
@@ -148,6 +149,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     if pO.DP:
         model = torch.nn.DataParallel(model)
     elif pO.DDP:
+        print("initializing model to:", opt.rank)
         model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
 
     model_ema = ModelEma(model)
@@ -340,6 +342,8 @@ def rSeed(sd):
     torch.cuda.manual_seed(sd)
 
 def launch_fn(rank, opt):
+    print("inside launch_fn...")
+    print("rank =", rank)
     global OnceExecWorker
     print("in launch_fn")
     gInit(opt)
