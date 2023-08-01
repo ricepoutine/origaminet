@@ -47,7 +47,7 @@ pO = None
 OnceExecWorker = None #Set to None if model saving/logs not required
 
 # Windows/Linux
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # Mac M1
 #device = torch.device('mps')
@@ -67,7 +67,7 @@ def WrkSeeder(_):
 def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_data_list, experiment_name, 
             train_batch_size, val_batch_size, workers, lr, valInterval, num_iter, wdbprj, continue_model=''):
 
-    HVD3P = None #pO.HVD or pO.DDP
+    HVD3P = pO.HVD or pO.DDP
 
     os.makedirs(f'./saved_models/{experiment_name}', exist_ok=True)
 
@@ -116,12 +116,10 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     biparams    = list(dict(filter(lambda kv: 'bias'     in kv[0], model.named_parameters())).values())
     nonbiparams = list(dict(filter(lambda kv: 'bias' not in kv[0], model.named_parameters())).values())
 
-    """
     if not pO.DDP:
         model = model.to(device)
     else:
         model.cuda(opt.rank)
-    """
 
     optimizer = optim.Adam(model.parameters(), lr=lr) #optim.SGD(model.parameters(), lr=lr, momentum=0.9) 
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=10**(-1/90000))
@@ -147,13 +145,11 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
 
     #if AMP:
     #    model, optimizer = amp.initialize(model, optimizer, opt_level = "O1")
-    #if pO.DP:
-    #    model = torch.nn.DataParallel(model)
-    #elif pO.DDP:
-    #    model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
+    if pO.DP:
+        model = torch.nn.DataParallel(model)
+    elif pO.DDP:
+        model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
 
-
-    model = torch.nn.DataParallel(model)
     model_ema = ModelEma(model)
 
     if continue_model != '':
