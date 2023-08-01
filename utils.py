@@ -7,10 +7,10 @@ from copy import deepcopy
 from collections import OrderedDict
 
 # windows/linux
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # mac m1
-device = torch.device('mps')
+#device = torch.device('mps')
 
 class CTCLabelConverter(object):
     """ Convert between text-label and text-index """

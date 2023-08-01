@@ -2,7 +2,7 @@ port = 12345
 manualSeed = 1111
 dist = 'DP'
 
-n_channels = 1 #1 for greyscale
+n_channels = 1 #1 is for black/white
 o_classes = 100 #80
 
 GradCheck = 0
@@ -15,7 +15,7 @@ get_images.nch = %n_channels
 
 # Parameters for SameTrCollate (ds_load.py):
 # ==============================================================================
-SameTrCollate.prjAug = True
+SameTrCollate.prjAug = False
 SameTrCollate.prjVal = 125
 
 # Parameters for train (train.py):
@@ -27,7 +27,7 @@ train.WdB = False
 train.wdbprj = 'prj_Name'
 train.train_data_list = 'rus/train.gc'
 train.train_data_path = 'data/'
-train.test_data_list  = 'rus/val.gc'
+train.test_data_list  = 'rus/test.gc'
 train.test_data_path  = 'data/'
 train.train_batch_size = 1
 train.val_batch_size   = 1
@@ -35,7 +35,7 @@ train.workers = 0
 train.lr = 0.01
 train.continue_model = ''
 train.valInterval = 25 #500
-train.num_iter = 0
+train.num_iter = 1
 
 
 # Parameters for OrigamiNet (cnv_model.py):
@@ -45,7 +45,7 @@ OrigamiNet.o_classes  = %o_classes
 OrigamiNet.fup = 33
 OrigamiNet.GradCheck = %GradCheck
 
-OrigamiNet.nlyrs = 12
+OrigamiNet.nlyrs = 6 #8 #12
 OrigamiNet.wmul = 1.0
 
 OrigamiNet.lszs = {0:  128,

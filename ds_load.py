@@ -95,8 +95,8 @@ def SameTrCollate(batch, prjAug, prjVal):
     images = [image.transpose((1,2,0)) for image in images]
     
     if prjAug:
-        images = [RndTform([image], val=prjVal)[0] for image in images] #different transform to each batch
-        # images = RndTform(images, val=prjVal) #apply same transform to all images in a batch
+        #images = [RndTform([image], val=prjVal)[0] for image in images] #different transform to each batch
+        images = RndTform(images, val=prjVal) #apply same transform to all images in a batch
    
     image_tensors = [torch.from_numpy(np.array(image, copy=False)) for image in images]
     image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)

@@ -17,8 +17,8 @@ import torch.multiprocessing as mp
 import torch.distributed as dist
 from torch.utils.data import Dataset
 from torch.nn.parallel import DistributedDataParallel as pDDP
-
 from torchsummary import summary
+
 from torchvision.utils import save_image
 #import horovod.torch as hvd
 import gin
@@ -44,13 +44,13 @@ parOptions = namedtuple('parOptions', ['DP', 'DDP', 'HVD'])
 parOptions.__new__.__defaults__ = (False,) * len(parOptions._fields)
 
 pO = None
-OnceExecWorker = True #Set to None if model saving/logs not required
+OnceExecWorker = None #Set to None if model saving/logs not required
 
 # Windows/Linux
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Mac M1
-device = torch.device('mps')
+#device = torch.device('mps')
 
 def init_bn(model):
     if type(model) in [torch.nn.InstanceNorm2d, torch.nn.BatchNorm2d]:
@@ -107,6 +107,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     num_workers = int(workers), sampler=valid_sampler if HVD3P else None)
     
     model = OrigamiNet()
+    print(model)
     model.apply(init_bn)
     model.train()
 
@@ -122,13 +123,14 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         model.cuda(opt.rank)
     """
 
-    #manual debugging purposes
-    model = model.to(device)
-
-    
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr) #optim.SGD(model.parameters(), lr=lr, momentum=0.9) 
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=10**(-1/90000))
 
+    #manual debugging purposes
+    print("Beginning mem:", torch.cuda.memory_allocated(device)/1024/1024/1024)
+    model = model.to(device)
+    print("After model to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
+    
     if OnceExecWorker and WdB:
         wandb.watch(model, log="all")
     """
@@ -150,9 +152,8 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     #elif pO.DDP:
     #    model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
 
+
     model = torch.nn.DataParallel(model)
-    
-    
     model_ema = ModelEma(model)
 
     if continue_model != '':
@@ -161,6 +162,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         model.load_state_dict(checkpoint['model'], strict=True)
         optimizer.load_state_dict(checkpoint['optimizer'])
         model_ema._load_checkpoint(continue_model, f'cuda:{opt.rank}' if HVD3P else None)
+
 
     criterion = torch.nn.CTCLoss(reduction='none', zero_infinity=True).to(device)
     converter = CTCLabelConverter(train_dataset.ralph.values())
@@ -211,6 +213,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                 image_tensors, labels = next(titer)
                 
             image = image_tensors.to(device)
+            print("After loading images to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
             text, length = converter.encode(labels)
             batch_size = image.size(0)
 
@@ -265,7 +268,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     optimizer.step()
                 
                 model.zero_grad()
-                model_ema.update(model, num_updates=i/2)
+                #model_ema.update(model, num_updates=i/2)
 
                 if (i+1) % (gAcc*2) == 0:
                     lr_scheduler.step()
@@ -284,7 +287,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
 
                 
                 valid_loss, current_accuracy, current_norm_ED, ted, bleu, preds, labels, infer_time = validation(
-                    model_ema.ema, criterion, valid_loader, converter, opt, pO)
+                    model, criterion, valid_loader, converter, opt, pO) #originally model was model_ema.ema
         
             model.train()
             v_time = time.time() - start_time
@@ -294,7 +297,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     best_norm_ED = current_norm_ED
                     checkpoint = {
                         'model': model.state_dict(),
-                        'state_dict_ema': model_ema.ema.state_dict(),
+                        #'state_dict_ema': model_ema.ema.state_dict(),
                         'optimizer': optimizer.state_dict(),
                     }
                     torch.save(checkpoint, f'./saved_models/{experiment_name}/best_norm_ED.pth')
@@ -384,7 +387,7 @@ if __name__ == '__main__':
     
 
     if not pO.DDP:
-        mp.set_start_method('fork', force=True)
+        mp.set_start_method('spawn', force=True)
         train(opt)
     else:
         mp.spawn(launch_fn, args=(opt,), nprocs=opt.num_gpu)
