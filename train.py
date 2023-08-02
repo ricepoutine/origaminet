@@ -75,8 +75,8 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         wandb.init(project=wdbprj, name=experiment_name)
         wandb.config.update(opt)
     
-    train_dataset = ds_load.myLoadDS(train_data_list, train_data_path)
-    valid_dataset = ds_load.myLoadDS(test_data_list, test_data_path) #ralph=train_dataset.ralph, issue was that sometimes latin chars were missing
+    train_dataset = ds_load.myLoadDS(train_data_list, train_data_path, ralph='full')
+    valid_dataset = ds_load.myLoadDS(test_data_list, test_data_path, ralph=train_dataset.ralph)
 
     if OnceExecWorker:
         print(pO)
