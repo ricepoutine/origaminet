@@ -114,6 +114,7 @@ class myLoadDS(Dataset):
             validation_labels = get_labels(get_files(flist2, dpath2))
             alph = get_alphabet(self.tlbls + validation_labels)
             self.ralph = dict(zip(alph.values(), alph.keys()))
+            self.alph = alph
         elif ralph == None:
             alph  = get_alphabet(self.tlbls)
             self.ralph = dict (zip(alph.values(),alph.keys()))
