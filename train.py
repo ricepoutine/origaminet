@@ -76,7 +76,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         wandb.config.update(opt)
     
     train_dataset = ds_load.myLoadDS(flist=train_data_list, dpath=train_data_path, flist2=test_data_list, dpath2=test_data_path, ralph='full')
-    valid_dataset = ds_load.myLoadDS(test_data_list, test_data_path, ralph=train_dataset.ralph)
+    valid_dataset = ds_load.myLoadDS(flist=test_data_list, dpath=test_data_path, ralph=train_dataset.ralph)
 
     if OnceExecWorker:
         print(pO)
