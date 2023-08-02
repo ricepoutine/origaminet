@@ -38,6 +38,7 @@ class CTCLabelConverter(object):
         """
         length = [len(s) for s in text]
         text = ''.join(text)
+        print(text)
         text = [self.dict[char] for char in text]
 
         return (torch.IntTensor(text).to(device), torch.IntTensor(length).to(device))

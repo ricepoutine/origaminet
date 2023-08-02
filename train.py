@@ -76,7 +76,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         wandb.config.update(opt)
     
     train_dataset = ds_load.myLoadDS(train_data_list, train_data_path)
-    valid_dataset = ds_load.myLoadDS(test_data_list, test_data_path , ralph=train_dataset.ralph)
+    valid_dataset = ds_load.myLoadDS(test_data_list, test_data_path) #ralph=train_dataset.ralph, issue was that sometimes latin chars were missing
 
     if OnceExecWorker:
         print(pO)
@@ -119,7 +119,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     if not pO.DDP:
         model = model.to(device)
     else:
-        print("moving model to:", opt.rank)
+        #print("moving model to:", opt.rank)
         model.cuda(opt.rank)
 
     optimizer = optim.Adam(model.parameters(), lr=lr) #optim.SGD(model.parameters(), lr=lr, momentum=0.9) 
@@ -149,7 +149,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
     if pO.DP:
         model = torch.nn.DataParallel(model)
     elif pO.DDP:
-        print("initializing model to:", opt.rank)
+        #print("initializing model to:", opt.rank)
         model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
 
     model_ema = ModelEma(model)
@@ -211,7 +211,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                 image_tensors, labels = next(titer)
                 
             image = image_tensors.to(device)
-            print("After loading images to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
+            #print("After loading images to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
             text, length = converter.encode(labels)
             batch_size = image.size(0)
 
@@ -266,7 +266,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     optimizer.step()
                 
                 model.zero_grad()
-                #model_ema.update(model, num_updates=i/2)
+                model_ema.update(model, num_updates=i/2)
 
                 if (i+1) % (gAcc*2) == 0:
                     lr_scheduler.step()
@@ -283,7 +283,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
             model.eval()
             with torch.no_grad():
                 valid_loss, current_accuracy, current_norm_ED, ted, bleu, preds, labels, infer_time = validation(
-                    model, criterion, valid_loader, converter, opt, pO) #originally model was model_ema.ema
+                    model_ema.ema, criterion, valid_loader, converter, opt, pO) #originally model was model_ema.ema
         
             model.train()
             v_time = time.time() - start_time
@@ -293,7 +293,7 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                     best_norm_ED = current_norm_ED
                     checkpoint = {
                         'model': model.state_dict(),
-                        #'state_dict_ema': model_ema.ema.state_dict(),
+                        'state_dict_ema': model_ema.ema.state_dict(),
                         'optimizer': optimizer.state_dict(),
                     }
                     torch.save(checkpoint, f'./saved_models/{experiment_name}/best_norm_ED.pth')
