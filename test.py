@@ -15,7 +15,7 @@ from utils import Averager
 # windows/linux
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-chencherry = SmoothingFunction
+chencherry = SmoothingFunction()
 
 # mac m1
 #device = torch.device('mps')
