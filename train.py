@@ -282,8 +282,6 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
 
             model.eval()
             with torch.no_grad():
-
-                
                 valid_loss, current_accuracy, current_norm_ED, ted, bleu, preds, labels, infer_time = validation(
                     model, criterion, valid_loader, converter, opt, pO) #originally model was model_ema.ema
         

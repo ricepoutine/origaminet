@@ -13,10 +13,10 @@ from nltk.translate.bleu_score import sentence_bleu
 
 from utils import Averager
 # windows/linux
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # mac m1
-device = torch.device('mps')
+#device = torch.device('mps')
 
 #def metric_sum_hvd(val, name):
 #    tensor = torch.tensor(val)
