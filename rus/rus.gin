@@ -3,7 +3,7 @@ manualSeed = 1111
 dist = 'DDP'
 
 n_channels = 1 #1 is for black/white
-o_classes = 100 #80
+o_classes = 112
 
 GradCheck = 0
 
@@ -15,12 +15,13 @@ get_images.nch = %n_channels
 
 # Parameters for SameTrCollate (ds_load.py):
 # ==============================================================================
-SameTrCollate.prjAug = False
+SameTrCollate.prjAug = True
 SameTrCollate.prjVal = 125
+SameTrCollate.multiplier = 3 #number of transformed datasets added to training set
 
 # Parameters for train (train.py):
 # ==============================================================================
-train.experiment_name = 'rus_gin_test_'
+train.experiment_name = 'rus_gin_test'
 
 train.AMP = False
 train.WdB = False
@@ -34,8 +35,8 @@ train.val_batch_size   = 1
 train.workers = 4
 train.lr = 0.01
 train.continue_model = ''
-train.valInterval = 25 #500
-train.num_iter = 1
+train.valInterval = 500 #500
+train.num_iter = 10000
 
 
 # Parameters for OrigamiNet (cnv_model.py):
@@ -45,8 +46,8 @@ OrigamiNet.o_classes  = %o_classes
 OrigamiNet.fup = 33
 OrigamiNet.GradCheck = %GradCheck
 
-OrigamiNet.nlyrs = 6 #8 #12
-OrigamiNet.wmul = 1.0
+OrigamiNet.nlyrs = 12 #6
+OrigamiNet.wmul = 2.0 #1.0
 
 OrigamiNet.lszs = {0:  128,
             2:  256,
@@ -58,8 +59,8 @@ MaxPool2d.kernel_size = (2,2)
 
 Upsample.mode = 'bilinear'
 Upsample.align_corners = True
-s1/Upsample.size = (450,15)
-s2/Upsample.size = (1100,8)
+s1/Upsample.size = (3500,31)
+s2/Upsample.size = (7200,15)
 
 OrigamiNet.lreszs = {
                   0: @MaxPool2d(),

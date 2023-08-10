@@ -253,8 +253,6 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
                         optimizer.step()
                 """
 
-                    
-                    
             #if btReplay: amp._amp_state.loss_scalers[0]._loss_scale = mx_sc
             
             if (i+1) % gAcc == 0:
