@@ -4,6 +4,7 @@ dist = 'DDP'
 
 n_channels = 1 #1 is for black/white
 o_classes = 112
+o_classes = 112
 
 GradCheck = 0
 
