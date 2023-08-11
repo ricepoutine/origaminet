@@ -375,6 +375,7 @@ if __name__ == '__main__':
         rSeed(opt.manualSeed)
 
     opt.num_gpu = torch.cuda.device_count()
+    print(opt.num_gpu)
     #opt.num_gpu = 1 #just used to spawn 1 instance, but does not work with mac M1
 
     #if pO.HVD:
