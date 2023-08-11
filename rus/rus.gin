@@ -15,7 +15,7 @@ get_images.nch = %n_channels
 
 # Parameters for SameTrCollate (ds_load.py):
 # ==============================================================================
-SameTrCollate.prjAug = True
+SameTrCollate.prjAug = False
 SameTrCollate.prjVal = 125
 SameTrCollate.multiplier = 3 #number of transformed datasets added to training set
 
@@ -30,24 +30,24 @@ train.train_data_list = 'rus/train.gc'
 train.train_data_path = 'data/'
 train.test_data_list  = 'rus/test.gc'
 train.test_data_path  = 'data/'
-train.train_batch_size = 1
-train.val_batch_size   = 1
-train.workers = 4
+train.train_batch_size = 2
+train.val_batch_size   = 2
+train.workers = 0
 train.lr = 0.01
 train.continue_model = ''
-train.valInterval = 500 #500
-train.num_iter = 10000
+train.valInterval = 100 #500
+train.num_iter = 1000
 
 
 # Parameters for OrigamiNet (cnv_model.py):
 # ==============================================================================
 OrigamiNet.n_channels = %n_channels
 OrigamiNet.o_classes  = %o_classes
-OrigamiNet.fup = 33
+OrigamiNet.fup = 10 #33
 OrigamiNet.GradCheck = %GradCheck
 
-OrigamiNet.nlyrs = 12 #6
-OrigamiNet.wmul = 2.0 #1.0
+OrigamiNet.nlyrs = 1 #6
+OrigamiNet.wmul = 1.0 #1.0
 
 OrigamiNet.lszs = {0:  128,
             2:  256,

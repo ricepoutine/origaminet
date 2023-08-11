@@ -344,12 +344,12 @@ def launch_fn(rank, opt):
     print("in launch_fn")
     gInit(opt)
     OnceExecWorker = OnceExecWorker or (pO.DDP and rank==0)
-    mp.set_start_method('fork', force=True)
+    mp.set_start_method('spawn', force=True) #originally fork
 
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = str(opt.port)
 
-    dist.init_process_group("nccl", rank=rank, world_size=opt.num_gpu)
+    dist.init_process_group("gloo", rank=rank, world_size=opt.num_gpu)
 
     #to ensure identical init parameters
     rSeed(opt.manualSeed)
@@ -359,6 +359,7 @@ def launch_fn(rank, opt):
     opt.rank       = rank
 
     train(opt)
+    dist.destroy_process_group()
 
 if __name__ == '__main__':
 
@@ -381,7 +382,7 @@ if __name__ == '__main__':
     #if pO.HVD:
     #    opt.world_size = hvd.size()
     #    opt.rank       = hvd.rank()
-    
+
 
     if not pO.DDP:
         mp.set_start_method('spawn', force=True)
