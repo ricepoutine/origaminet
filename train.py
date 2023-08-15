@@ -40,6 +40,8 @@ from utils import CTCLabelConverter, Averager, ModelEma, Metric
 from cnv_model import OrigamiNet, ginM
 from test import validation
 
+os.environ["CUDA_VISIBLE_DEVICES"] = '6,7' #controls number of gpus used
+
 parOptions = namedtuple('parOptions', ['DP', 'DDP', 'HVD'])
 parOptions.__new__.__defaults__ = (False,) * len(parOptions._fields)
 
@@ -359,6 +361,7 @@ def launch_fn(rank, opt):
     opt.rank       = rank
 
     train(opt)
+    dist.destroy_process_group()
 
 if __name__ == '__main__':
 

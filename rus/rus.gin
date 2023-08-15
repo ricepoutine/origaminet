@@ -15,7 +15,7 @@ get_images.nch = %n_channels
 
 # Parameters for SameTrCollate (ds_load.py):
 # ==============================================================================
-SameTrCollate.prjAug = True
+SameTrCollate.prjAug = False
 SameTrCollate.prjVal = 125
 SameTrCollate.multiplier = 3 #number of transformed datasets added to training set
 
