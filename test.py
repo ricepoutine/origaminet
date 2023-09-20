@@ -8,15 +8,17 @@ import torch.utils.data
 import torch.distributed as dist
 import numpy as np
 import editdistance
-from nltk.translate.bleu_score import sentence_bleu
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 #import horovod.torch as hvd
 
 from utils import Averager
 # windows/linux
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+chencherry = SmoothingFunction()
 
 # mac m1
-device = torch.device('mps')
+#device = torch.device('mps')
 
 #def metric_sum_hvd(val, name):
 #    tensor = torch.tensor(val)
@@ -81,7 +83,7 @@ def validation(model, criterion, evaluation_loader, converter, opt, parO):
 
             tot_ED += tmped
             length_of_gt += len(gt)
-            bleu += sentence_bleu( [list(gt)], list(pred) ) 
+            bleu += sentence_bleu( [list(gt)], list(pred), smoothing_function=chencherry.method0 ) 
     """
     if parO.HVD:
         n_correct  = metric_sum_hvd(n_correct , 'sum_n_correct')

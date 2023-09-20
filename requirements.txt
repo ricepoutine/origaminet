@@ -15,4 +15,5 @@ fire
 Pillow
 scikit_learn
 editdistance
+wandb
 git+https://github.com/google/gin-config

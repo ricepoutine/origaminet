@@ -89,14 +89,17 @@ def RndTform(img,val):
     return ret
 
 @gin.configurable
-def SameTrCollate(batch, prjAug, prjVal):
+def SameTrCollate(batch, prjAug, prjVal, multiplier):
     images, labels = zip(*batch)
 
     images = [image.transpose((1,2,0)) for image in images]
     
     if prjAug:
-        images = [RndTform([image], val=prjVal)[0] for image in images] #different transform to each batch
-        # images = RndTform(images, val=prjVal) #apply same transform to all images in a batch
+        #images = [RndTform([image], val=prjVal)[0] for image in images] #different transform to each batch
+        #images = RndTform(images, val=prjVal) #apply same transform to all images in a batch
+        for _ in range(multiplier): 
+            images_tformed = RndTform(images, val=prjVal)
+            images.append(images_tformed)
    
     image_tensors = [torch.from_numpy(np.array(image, copy=False)) for image in images]
     image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)
@@ -106,11 +109,16 @@ def SameTrCollate(batch, prjAug, prjVal):
 
 
 class myLoadDS(Dataset):
-    def __init__(self, flist, dpath, ralph=None, fmin=True, mln=None):
+    def __init__(self, flist, dpath, flist2=None, dpath2=None, ralph=None, fmin=True, mln=None):
         self.fns = get_files(flist, dpath)
         self.tlbls = get_labels(self.fns)
         
-        if ralph == None:
+        if ralph=='full':
+            validation_labels = get_labels(get_files(flist2, dpath2))
+            alph = get_alphabet(self.tlbls + validation_labels)
+            self.ralph = dict(zip(alph.values(), alph.keys()))
+            self.alph = alph
+        elif ralph == None:
             alph  = get_alphabet(self.tlbls)
             self.ralph = dict (zip(alph.values(),alph.keys()))
             self.alph = alph
