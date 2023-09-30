@@ -66,7 +66,7 @@ def WrkSeeder(_):
     return np.random.seed((torch.initial_seed()) % (2 ** 32))
 
 @gin.configurable
-def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_data_list, experiment_name, 
+def train(opt, AMP, WdB, train_data_path, train_data_list, valid_data_path, valid_data_list, experiment_name, 
             train_batch_size, val_batch_size, workers, lr, valInterval, num_iter, wdbprj, continue_model=''):
 
     HVD3P = pO.HVD or pO.DDP
@@ -77,8 +77,8 @@ def train(opt, AMP, WdB, train_data_path, train_data_list, test_data_path, test_
         wandb.init(project=wdbprj, name=experiment_name)
         wandb.config.update(opt)
     
-    train_dataset = ds_load.myLoadDS(flist=train_data_list, dpath=train_data_path, flist2=test_data_list, dpath2=test_data_path, ralph='full')
-    valid_dataset = ds_load.myLoadDS(flist=test_data_list, dpath=test_data_path, ralph=train_dataset.ralph)
+    train_dataset = ds_load.myLoadDS(flist=train_data_list, dpath=train_data_path, flist2=valid_data_list, dpath2=valid_data_path, ralph='full')
+    valid_dataset = ds_load.myLoadDS(flist=valid_data_list, dpath=valid_data_path, ralph=train_dataset.ralph)
 
     if OnceExecWorker:
         print(pO)

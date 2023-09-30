@@ -1,0 +1,81 @@
+port = 12345
+manualSeed = 1111
+dist = 'DDP'
+
+n_channels = 1 #1 is for black/white
+o_classes = 112
+
+GradCheck = 0
+
+# Parameters for get_images (ds_load.py):
+# ==============================================================================
+get_images.max_w = 1400
+get_images.max_h = 2200
+get_images.nch = %n_channels
+
+# Parameters for SameTrCollate (ds_load.py):
+# ==============================================================================
+SameTrCollate.prjAug = False
+SameTrCollate.prjVal = 125
+SameTrCollate.multiplier = 3 #number of transformed datasets added to training set
+
+# Parameters for test (test.py):
+# ==============================================================================
+test.experiment_name = 'rus_gin_test'
+test.train_data_list = 'rus/train.gc'
+test.train_data_path = 'data/'
+test.valid_data_list  = 'rus/valid.gc'
+test.valid_data_path  = 'data/'
+test.test_data_list = 'rus/test.gc'
+test.test_data_path = 'data_test/'
+
+test.batch_size = 1
+test.workers = 4
+#test.lr = 0.01
+#test.continue_model = ''
+#test.valInterval = 500 #500
+#test.num_iter = 10000
+
+
+# Parameters for OrigamiNet (cnv_model.py):
+# ==============================================================================
+OrigamiNet.n_channels = %n_channels
+OrigamiNet.o_classes  = %o_classes
+OrigamiNet.fup = 33
+OrigamiNet.GradCheck = %GradCheck
+
+OrigamiNet.nlyrs = 12 #6
+OrigamiNet.wmul = 2.0 #1.0
+
+OrigamiNet.lszs = {0:  128,
+            2:  256,
+            4:  512,
+            11: 256  }
+
+##resize structure##
+MaxPool2d.kernel_size = (2,2)
+
+Upsample.mode = 'bilinear'
+Upsample.align_corners = True
+s1/Upsample.size = (3500,31)
+s2/Upsample.size = (7200,15)
+
+OrigamiNet.lreszs = {
+                  0: @MaxPool2d(),
+                  2: @MaxPool2d(),
+                  4: @MaxPool2d(),
+
+                  6: @PadPool(),
+                  8: @PadPool(),
+                  
+                  10: @s1/Upsample(),
+                  11: @s2/Upsample()
+            }
+
+# Parameters for InitBlock (cnv_model.py):
+# ==============================================================================
+InitBlock.n_channels = %n_channels
+
+# Parameters for GateBlock (cnv_model.py):
+# ==============================================================================
+GateBlock.GradCheck = %GradCheck

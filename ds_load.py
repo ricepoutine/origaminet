@@ -107,29 +107,23 @@ def SameTrCollate(batch, prjAug, prjVal, multiplier):
 
     return image_tensors, labels
 
-
 class myLoadDS(Dataset):
-    def __init__(self, flist, dpath, flist2=None, dpath2=None, ralph=None, fmin=True, mln=None):
+    def __init__(self, flist, dpath, ralph=None, alph=None, fmin=True, mln=None):
         self.fns = get_files(flist, dpath)
         self.tlbls = get_labels(self.fns)
-        
-        if ralph=='full':
-            validation_labels = get_labels(get_files(flist2, dpath2))
-            alph = get_alphabet(self.tlbls + validation_labels)
+        if ralph == None:
+            labels = get_labels(self.fns)
+            alph = get_alphabet(self.tlbls + labels)
             self.ralph = dict(zip(alph.values(), alph.keys()))
-            self.alph = alph
-        elif ralph == None:
-            alph  = get_alphabet(self.tlbls)
-            self.ralph = dict (zip(alph.values(),alph.keys()))
             self.alph = alph
         else:
             self.ralph = ralph
-        
+            self.alph = alph
         if mln != None:
             filt = [len(x) <= mln if fmin else len(x) >= mln for x in self.tlbls]
             self.tlbls = np.asarray(self.tlbls)[filt].tolist()
-            self.fns   = np.asarray(self.fns  )[filt].tolist()
-    
+            self.fns = np.asarray(self.fns  )[filt].tolist()
+
     def __len__(self):
         return len(self.fns)
 
@@ -138,6 +132,26 @@ class myLoadDS(Dataset):
         timgs = timgs.transpose((2,0,1))
 
         return ( timgs , self.tlbls[index] )
+    
+class myTestDS(Dataset):
+    def __init__(self, flist, dpath, fmin=True, mln=None, alph=None):
+        self.fns = get_files(flist, dpath)
+        self.tlbls = None
+        self.alph = alph
+        self.ralph = dict(zip(alph.values(), alph.keys()))
+        
+        if mln != None:
+            filt = [len(x) <= mln if fmin else len(x) >= mln for x in self.tlbls]
+            self.fns = np.asarray(self.fns  )[filt].tolist()
+
+    def __len__(self):
+        return len(self.fns)
+
+    def __getitem__(self, index):
+        timgs = get_images(self.fns[index])
+        timgs = timgs.transpose((2,0,1))
+
+        return timgs
 
 def get_files(nfile, dpath):
     fnames = open(nfile, 'r').readlines()
@@ -157,7 +171,6 @@ def npThum(img, max_w, max_h):
 def get_images(fname, max_w, max_h, nch):
 
     try:
-
         image_data = Image.open(fname)
         #convert to greyscale
         transform = transforms.Grayscale()

@@ -34,7 +34,6 @@ def metric_sum_ddp(tensor, av=False):
     return rt
 
 def validation(model, criterion, evaluation_loader, converter, opt, parO):
-    """ validation or evaluation """
     n_correct = 0
     norm_ED = 0
     tot_ED = 0
@@ -108,3 +107,30 @@ def validation(model, criterion, evaluation_loader, converter, opt, parO):
     accuracy = n_correct / nelms * 100
 
     return val_loss, accuracy, norm_ED, tot_ED, bleu, preds_str, labels, infer_time
+
+def evaluate(model, evaluation_loader, converter):
+
+    preds_list = []
+
+    for i, image_tensors in enumerate(evaluation_loader):
+        batch_size = image_tensors.size(0)
+        image = image_tensors.to(device)
+
+        preds = model(image, '')
+
+        # Calculate evaluation loss for CTC deocder.
+        preds_size = torch.IntTensor([preds.size(1)] * batch_size)
+        preds = preds.permute(1, 0, 2).log_softmax(2)  # to use CTCloss format
+
+        # To avoid ctc_loss issue, disabled cudnn for the computation of the ctc_loss
+        # https://github.com/jpuigcerver/PyLaia/issues/16
+        torch.backends.cudnn.enabled = False
+        torch.backends.cudnn.enabled = True
+
+        _, preds_index = preds.max(2)
+        preds_index = preds_index.transpose(1, 0).contiguous().view(-1)
+        preds_str = converter.decode(preds_index.data, preds_size.data)
+
+        preds_list.append(preds_str)
+
+    return preds_list
