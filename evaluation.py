@@ -35,28 +35,31 @@ def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list
     print('Dataset Size :',len(test_dataset.fns))
     print('-'*80)
 
-    test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset, num_replicas=opt.world_size, rank=opt.rank)
+    #test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset, num_replicas=opt.world_size, rank=opt.rank)
 
     test_loader  = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size , pin_memory=True, 
-                    num_workers = workers, sampler=test_sampler)
+                    num_workers = workers, sampler=None)
 
     model = OrigamiNet()
     checkpoint = torch.load('saved_models/rus_gin_test/best_norm_ED.pth')
-    for key in list(checkpoint['model']):
-        checkpoint['model'][key.replace('module.', '')] = checkpoint['model'].pop(key)
+    model_weights = checkpoint['model']
+    model_weights_list = list(model_weights.items())
+    for i in range(len(model_weights_list)):
+        key = model_weights_list[i][0]
+        oldKey = checkpoint['model'].pop(key)
+        checkpoint['model'][key[7:]] = oldKey
 
-    model.load_state_dict(checkpoint['model'])
+    #model.load_state_dict(checkpoint['model'])
     model.eval()
-    model.cuda(opt.rank)
-
+    model = model.to(device)
     #manual debugging purposes
     #print("Beginning mem:", torch.cuda.memory_allocated(device)/1024/1024/1024)
     #model = model.to(device)
     #print("After model to device:", torch.cuda.memory_allocated(device)/1024/1024/1024)
 
-    model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
+    #model = pDDP(model, device_ids=[opt.rank], output_device=opt.rank,find_unused_parameters=False)
     model_ema = ModelEma(model)
-    model_ema._load_checkpoint('saved_models/rus_gin_test/best_norm_ED.pth')
+    model_ema._load_checkpoint('saved_models/rus_gin_test/best_norm_ED.pth', eval=True)
     print("Model EMA loaded...")
     converter = CTCLabelConverter(test_dataset.ralph.values())
     print("Converter loaded with alphabet...")
@@ -65,8 +68,9 @@ def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list
         preds_list = evaluate(model_ema.ema, test_loader, converter) #originally model was model_ema.ema
 
     os.makedirs(f'./test_results/{experiment_name}', exist_ok=True)
-    with open(f'./test_results/{experiment_name}/output.txt', 'w') as f:
-        f.writelines(preds_list)
+    with open(f'./test_results/{experiment_name}/output.csv', 'w') as f:
+        for line in preds_list:
+            f.write("%s\n" %line)
         f.close()
 
 def gInit(opt):
@@ -104,4 +108,5 @@ if __name__ == '__main__':
     opt.manualSeed = ginM('manualSeed')
     opt.port = ginM('port')
     opt.num_gpu = torch.cuda.device_count()
-    mp.spawn(launch_fn, args=(opt,), nprocs=opt.num_gpu, start_method='fork')
+    #mp.spawn(launch_fn, args=(opt,), nprocs=opt.num_gpu, start_method='fork')
+    test(opt)

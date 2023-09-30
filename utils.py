@@ -139,22 +139,32 @@ class ModelEma:
         for p in self.ema.parameters():
             p.requires_grad_(False)
 
-    def _load_checkpoint(self, checkpoint_path, mapl=None):
+    def _load_checkpoint(self, checkpoint_path, eval=False, mapl=None):
         checkpoint = torch.load(checkpoint_path,map_location=mapl)
         assert isinstance(checkpoint, dict)
-        if 'state_dict_ema' in checkpoint:
-            new_state_dict = OrderedDict()
-            for k, v in checkpoint['state_dict_ema'].items():
-                # ema model may have been wrapped by DataParallel, and need module prefix
-                if self.ema_has_module:
-                    name = 'module.' + k if not k.startswith('module') else k
-                else:
-                    name = k
-                new_state_dict[name] = v
-            self.ema.load_state_dict(new_state_dict)
+        if eval:
+            model_weights = checkpoint['state_dict_ema']
+            model_weights_list = list(model_weights.items())
+            for i in range(len(model_weights_list)):
+                key = model_weights_list[i][0]
+                oldKey = checkpoint['state_dict_ema'].pop(key)
+                checkpoint['state_dict_ema'][key[7:]] = oldKey
+            self.ema.load_state_dict(checkpoint['state_dict_ema'])
             print("=> Loaded state_dict_ema")
         else:
-            print("=> Failed to find state_dict_ema, starting from loaded model weights")
+            if 'state_dict_ema' in checkpoint:
+                new_state_dict = OrderedDict()
+                for k, v in checkpoint['state_dict_ema'].items():
+                    # ema model may have been wrapped by DataParallel, and need module prefix
+                    if self.ema_has_module:
+                        name = 'module.' + k if not k.startswith('module') else k
+                    else:
+                        name = k
+                    new_state_dict[name] = v
+                self.ema.load_state_dict(new_state_dict)
+                print("=> Loaded state_dict_ema")
+            else:
+                print("=> Failed to find state_dict_ema, starting from loaded model weights")
 
     def update(self, model, num_updates=-1):
         # correct a mismatch in state dict keys

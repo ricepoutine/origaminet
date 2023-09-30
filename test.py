@@ -131,6 +131,6 @@ def evaluate(model, evaluation_loader, converter):
         preds_index = preds_index.transpose(1, 0).contiguous().view(-1)
         preds_str = converter.decode(preds_index.data, preds_size.data)
 
-        preds_list.append(preds_str)
+        preds_list.append(preds_str[0])
 
     return preds_list

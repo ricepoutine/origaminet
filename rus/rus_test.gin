@@ -30,7 +30,7 @@ test.test_data_list = 'rus/test.gc'
 test.test_data_path = 'data_test/'
 
 test.batch_size = 1
-test.workers = 4
+test.workers = 0
 #test.lr = 0.01
 #test.continue_model = ''
 #test.valInterval = 500 #500
