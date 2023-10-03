@@ -21,6 +21,7 @@ SameTrCollate.multiplier = 3 #number of transformed datasets added to training s
 
 # Parameters for test (test.py):
 # ==============================================================================
+test.experiment_type = 'training_set_check'
 test.experiment_name = 'rus_gin_test'
 test.train_data_list = 'rus/train.gc'
 test.train_data_path = 'data/'

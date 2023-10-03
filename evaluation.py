@@ -20,7 +20,7 @@ from test import evaluate
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 @gin.configurable
-def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list, test_data_path, test_data_list, experiment_name, batch_size, workers):
+def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list, test_data_path, test_data_list, experiment_name, experiment_type, batch_size, workers):
     os.makedirs(f'./saved_models/{experiment_name}', exist_ok=True)
     parOptions = namedtuple('parOptions', ['DP', 'DDP', 'HVD'])
     parOptions.__new__.__defaults__ = (False,) * len(parOptions._fields)
@@ -30,7 +30,8 @@ def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list
     train_dataset = myLoadDS(flist=train_data_list, dpath=train_data_path)
     valid_dataset = myLoadDS(flist=valid_data_list, dpath=valid_data_path)
     alph = train_dataset.alph | valid_dataset.alph
-    test_dataset = myTestDS(flist=test_data_list, dpath=test_data_path, alph=alph)
+    #test_dataset = myTestDS(flist=test_data_list, dpath=test_data_path, alph=alph)
+    test_dataset = myTestDS(flist=train_data_list, dpath=train_data_path, alph=alph)
     print('Alphabet :',len(test_dataset.alph),test_dataset.alph)
     print('Dataset Size :',len(test_dataset.fns))
     print('-'*80)
@@ -68,7 +69,7 @@ def test(opt, train_data_path, train_data_list, valid_data_path, valid_data_list
         preds_list = evaluate(model_ema.ema, test_loader, converter) #originally model was model_ema.ema
 
     os.makedirs(f'./test_results/{experiment_name}', exist_ok=True)
-    with open(f'./test_results/{experiment_name}/output.csv', 'w') as f:
+    with open(f'./test_results/{experiment_name}/output_{experiment_type}.csv', 'w') as f:
         for line in preds_list:
             f.write("%s\n" %line)
         f.close()
